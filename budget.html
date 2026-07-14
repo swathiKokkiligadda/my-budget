@@ -4,275 +4,402 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cloud Home Budget</title>
-    <script src="https://jsdelivr.net"></script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; }
+        /* High-speed built-in styles. No internet required to load these! */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #111827;
+            margin: 0;
+            padding-bottom: 3rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+        header {
+            background-color: #2563eb;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+        .sync-btn {
+            background-color: #1d4ed8;
+            color: white;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        main {
+            max-width: 800px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            main { grid-template-columns: 2fr 1fr; }
+        }
+        .card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+        .card h2, .card h3 { margin-top: 0; color: #1f2937; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .amount-input {
+            width: 100%;
+            font-size: 1.875rem;
+            font-weight: 700;
+            padding: 0.5rem;
+            background-color: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            color: #2563eb;
+            box-sizing: border-box;
+        }
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .cat-btn {
+            background-color: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #374151;
+            cursor: pointer;
+        }
+        .cat-btn.selected {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+        }
+        .sub-btn {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+            cursor: pointer;
+        }
+        .sub-btn.selected {
+            border-color: #059669;
+            background-color: #ecfdf5;
+            color: #047857;
+        }
+        .submit-btn {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .hidden { display: none !important; }
+        .ledger-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.875rem;
+        }
+        .summary-card {
+            background: linear-gradient(to bottom right, #1e293b, #0f172a);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+        }
+        .summary-main { font-size: 2.25rem; font-weight: 800; margin: 0.25rem 0 1rem 0; }
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+        }
+        .badge-green { background-color: #d1fae5; color: #065f46; }
+        .badge-red { background-color: #fee2e2; color: #991b1b; }
+        .badge-gray { background-color: #f3f4f6; color: #374151; }
+        .history-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            background-color: #f9fafb;
+            border: 1px solid #f3f4f6;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900 font-sans antialiased pb-12">
+<body>
 
-    <!-- Loading Screen Overlay -->
-    <div id="loading-screen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white hidden">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
-        <p class="font-semibold text-lg" id="loading-text">Connecting to Google Drive...</p>
-    </div>
-
-    <!-- Top Navigation Bar -->
-    <header class="bg-blue-600 text-white shadow-md sticky top-0 z-40 px-6 py-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold tracking-tight">Cloud Home Budget</h1>
-        <button onclick="fetchAndRenderData()" class="bg-blue-700 hover:bg-blue-800 text-xs font-bold px-3 py-2 rounded-lg transition-all">🔄 Sync Now</button>
+    <header>
+        <h1>Cloud Home Budget</h1>
+        <button onclick="fetchAndRenderData()" class="sync-btn">🔄 Sync Now</button>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Input & Log -->
-        <section class="md:col-span-2 space-y-6">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-lg font-bold text-gray-800 mb-4">📝 Quick Log Entry</h2>
-                <form id="expense-form" class="space-y-4" onsubmit="saveExpense(event)">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Amount ($)</label>
-                        <input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00" class="w-full text-3xl font-bold px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-blue-600">
+    <main>
+        <!-- Form Section -->
+        <section style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="card">
+                <h2>📝 Quick Log Entry</h2>
+                <form onsubmit="saveExpense(event)">
+                    <div class="form-group">
+                        <label>Amount ($)</label>
+                        <input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00" class="amount-input">
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</label>
-                        <div class="grid grid-cols-3 gap-2" id="category-grid"></div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <div class="btn-grid" id="category-grid"></div>
                     </div>
-                    <div id="subcategory-wrapper" class="hidden">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Subcategory</label>
-                        <div class="grid grid-cols-3 gap-2" id="subcategory-grid"></div>
+                    <div class="form-group hidden" id="subcategory-wrapper">
+                        <label>Subcategory</label>
+                        <div class="btn-grid" id="subcategory-grid"></div>
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all active:scale-[0.99]">Cloud Log Expense</button>
+                    <button type="submit" class="submit-btn">Cloud Log Expense</button>
                 </form>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h3 class="text-md font-bold text-gray-800 mb-3 uppercase tracking-wider text-xs text-gray-500">This Week's Cloud Ledger</h3>
-                <div class="divide-y divide-gray-100 max-h-64 overflow-y-auto" id="ledger-list"></div>
+
+            <div class="card">
+                <h3>This Week's Cloud Ledger</h3>
+                <div id="ledger-list" style="max-height: 250px; overflow-y: auto;"></div>
             </div>
         </section>
-        <!-- Statistics -->
-        <section class="space-y-6">
-            <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-md space-y-4">
-                <div>
-                    <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">This Week Total</p>
-                    <p class="text-4xl font-extrabold" id="total-this-week">$0.00</p>
-                </div>
-                <hr class="border-slate-700">
-                <div>
-                    <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Previous Week Total</p>
-                    <p class="text-xl font-bold text-slate-300" id="total-last-week">$0.00</p>
-                </div>
-                <div id="comparison-badge" class="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full"></div>
+
+        <!-- Stats Section -->
+        <section style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div class="summary-card">
+                <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">This Week Total</span>
+                <div class="summary-main" id="total-this-week">$0.00</div>
+                <hr style="border-color: #334155; margin: 1rem 0;">
+                <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Previous Week Total</span>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #cbd5e1; margin-top: 0.25rem;" id="total-last-week">$0.00</div>
+                <div id="comparison-badge" style="margin-top: 1rem;"></div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider text-gray-500">Weekly Progress</h3>
-                <div class="space-y-3" id="history-list"></div>
+
+            <div class="card">
+                <h3>Weekly Progress</h3>
+                <div id="history-list"></div>
             </div>
         </section>
     </main>
 
     <script>
-    // =========================================================
-    // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE INSIDE QUOTES
-    // =========================================================
-    const WEB_APP_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
+        // =========================================================
+        // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE INSIDE QUOTES
+        // =========================================================
+        const WEB_APP_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
 
-    const CONFIG = {
-        categories: {
-            "Groceries": ["Fruits", "Vegetables", "Dairy", "Grains/Meat", "Snacks"],
-            "Utilities": ["Electric", "Water", "Gas", "Internet"],
-            "Household": ["Cleaning", "Kids Items", "Kitchenware", "Tools"],
-            "Other": ["General"]
-        }
-    };
-
-    let selectedCategory = "";
-    let selectedSubcategory = "";
-    
-    // OPTIMIZATION: Instantly load cached history from local device buffer on startup
-    let cachedExpenses = JSON.parse(localStorage.getItem('budget_local_cache')) || [];
-
-    function getWeekString(dateInput) {
-        const date = dateInput ? new Date(dateInput) : new Date();
-        if (isNaN(date.getTime())) return "Unknown";
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        return d.getUTCFullYear() + "-W" + String(weekNo).padStart(2, '0');
-    }
-
-    function getPreviousWeekString(currentWeekStr) {
-        const parts = currentWeekStr.split('-W');
-        if (parts.length !== 2) return "";
-        const year = parseInt(parts);
-        const week = parseInt(parts);
-        if (week === 1) return (year - 1) + "-W52";
-        return year + "-W" + String(week - 1).padStart(2, '0');
-    }
-
-    // OPTIMIZATION: Renders your buttons and numbers immediately from cache
-    function initApp() {
-        renderCategoryGrid();
-        updateDashboardUI(); // Zero delay layout initialization
-        
-        // Quietly connects to Google in the background without locking your screen
-        fetchAndRenderData();
-    }
-
-    function renderCategoryGrid() {
-        const grid = document.getElementById('category-grid');
-        grid.innerHTML = "";
-        Object.keys(CONFIG.categories).forEach(cat => {
-            const btn = document.createElement('button');
-            btn.type = "button";
-            btn.className = "p-3 rounded-xl border-2 text-sm font-bold text-center transition-all " + (selectedCategory === cat ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700');
-            btn.innerText = cat;
-            btn.onclick = function() { selectCategory(cat); };
-            grid.appendChild(btn);
-        });
-    }
-
-    function selectCategory(cat) {
-        selectedCategory = cat;
-        selectedSubcategory = CONFIG.categories[cat]; 
-        renderCategoryGrid();
-        
-        const subWrapper = document.getElementById('subcategory-wrapper');
-        const subGrid = document.getElementById('subcategory-grid');
-        subWrapper.classList.remove('hidden');
-        subGrid.innerHTML = "";
-        
-        CONFIG.categories[cat].forEach(sub => {
-            const btn = document.createElement('button');
-            btn.type = "button";
-            btn.className = "p-2 rounded-lg border text-xs font-semibold text-center transition-all " + (selectedSubcategory === sub ? 'border-emerald-600 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 bg-white text-gray-600');
-            btn.innerText = sub;
-            btn.onclick = function() {
-                selectedSubcategory = sub;
-                selectCategory(cat);
-            };
-            subGrid.appendChild(btn);
-        });
-    }
-
-    async function saveExpense(e) {
-        e.preventDefault();
-        const amountInput = document.getElementById('amount');
-        const amount = parseFloat(amountInput.value);
-        
-        if (!amount || !selectedCategory) return;
-
-        const localEntry = {
-            amount: amount,
-            category: selectedCategory,
-            subcategory: selectedSubcategory || "General",
-            date: new Date().toISOString()
+        const CONFIG = {
+            categories: {
+                "Groceries": ["Fruits", "Vegetables", "Dairy", "Grains/Meat", "Snacks"],
+                "Utilities": ["Electric", "Water", "Gas", "Internet"],
+                "Household": ["Cleaning", "Kids Items", "Kitchenware", "Tools"],
+                "Other": ["General"]
+            }
         };
 
-        // Appends to layout screen immediately
-        cachedExpenses.unshift(localEntry);
-        localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
-        updateDashboardUI();
+        let selectedCategory = "";
+        let selectedSubcategory = "";
+        let cachedExpenses = JSON.parse(localStorage.getItem('budget_local_cache')) || [];
 
-        // Clears data entry controls instantly
-        amountInput.value = "";
-        selectedCategory = "";
-        selectedSubcategory = "";
-        document.getElementById('subcategory-wrapper').classList.add('hidden');
-        renderCategoryGrid();
+        function getWeekString(dateInput) {
+            const date = dateInput ? new Date(dateInput) : new Date();
+            if (isNaN(date.getTime())) return "Unknown";
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return d.getUTCFullYear() + "-W" + String(weekNo).padStart(2, '0');
+        }
 
-        // Dispatches cloud update to Google Drive securely in the background
-        try {
-            await fetch(WEB_APP_URL, {
-                method: "POST",
-                mode: "no-cors", 
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(localEntry)
+        function getPreviousWeekString(currentWeekStr) {
+            const parts = currentWeekStr.split('-W');
+            if (parts.length !== 2) return "";
+            const year = parseInt(parts[0]);
+            const week = parseInt(parts[1]);
+            if (week === 1) return (year - 1) + "-W52";
+            return year + "-W" + String(week - 1).padStart(2, '0');
+        }
+
+        function initApp() {
+            renderCategoryGrid();
+            updateDashboardUI();
+            fetchAndRenderData();
+        }
+
+        function renderCategoryGrid() {
+            const grid = document.getElementById('category-grid');
+            grid.innerHTML = "";
+            Object.keys(CONFIG.categories).forEach(cat => {
+                const btn = document.createElement('button');
+                btn.type = "button";
+                btn.className = "cat-btn" + (selectedCategory === cat ? " selected" : "");
+                btn.innerText = cat;
+                btn.onclick = function() { selectCategory(cat); };
+                grid.appendChild(btn);
             });
-        } catch (err) {
-            console.error("Background sync failed", err);
         }
-    }
+        function selectCategory(cat) {
+    selectedCategory = cat;
+    selectedSubcategory = CONFIG.categories[cat][0]; // Selects the first subcategory by default
+    renderCategoryGrid();
+    
+    const subWrapper = document.getElementById('subcategory-wrapper');
+    const subGrid = document.getElementById('subcategory-grid');
+    subWrapper.classList.remove('hidden');
+    subGrid.innerHTML = "";
+    
+    CONFIG.categories[cat].forEach(sub => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "sub-btn" + (selectedSubcategory === sub ? " selected" : "");
+        btn.innerText = sub;
+        btn.onclick = function() {
+            selectedSubcategory = sub;
+            selectCategory(cat);
+        };
+        subGrid.appendChild(btn);
+    });
+}
 
-    // OPTIMIZATION: Quietly refreshes local device storage once Google's server wakes up
-    async function fetchAndRenderData() {
-        try {
-            const response = await fetch(WEB_APP_URL);
-            const serverData = await response.json();
-            if (serverData && serverData.length > 0) {
-                cachedExpenses = serverData.reverse();
-                // Overwrite cache with the source of truth from your sheet
-                localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
-                updateDashboardUI();
-            }
-        } catch (err) {
-            console.error("Background fetch failed", err);
-        }
-    }
+async function saveExpense(e) {
+    e.preventDefault();
+    const amountInput = document.getElementById('amount');
+    const amount = parseFloat(amountInput.value);
+    
+    if (!amount || !selectedCategory) return;
 
-    function updateDashboardUI() {
-        const thisWeekStr = getWeekString();
-        const lastWeekStr = getPreviousWeekString(thisWeekStr);
-        
-        let thisWeekTotal = 0;
-        let lastWeekTotal = 0;
-        const weeklyAggregates = {};
+    const localEntry = {
+        amount: amount,
+        category: selectedCategory,
+        subcategory: selectedSubcategory || "General",
+        date: new Date().toISOString()
+    };
 
-        const ledgerList = document.getElementById('ledger-list');
-        ledgerList.innerHTML = "";
+    cachedExpenses.unshift(localEntry);
+    localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
+    updateDashboardUI();
 
-        cachedExpenses.forEach(exp => {
-            const itemWeek = getWeekString(exp.date);
-            exp.computedWeek = itemWeek;
+    amountInput.value = "";
+    selectedCategory = "";
+    selectedSubcategory = "";
+    document.getElementById('subcategory-wrapper').classList.add('hidden');
+    renderCategoryGrid();
 
-            if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
-            if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
-
-            if (itemWeek !== "Unknown") {
-                weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
-            }
-
-            if (itemWeek === thisWeekStr) {
-                const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-                const row = document.createElement('div');
-                row.className = "flex justify-between items-center py-3 text-sm";
-                row.innerHTML = '<div><p class="font-bold text-gray-800">' + exp.category + ' <span class="text-xs font-normal text-gray-400">/ ' + exp.subcategory + '</span></p><p class="text-xs text-gray-400">' + cleanDate + '</p></div><span class="font-extrabold text-gray-900">$' + exp.amount.toFixed(2) + '</span>';
-                ledgerList.appendChild(row);
-            }
+    try {
+        await fetch(WEB_APP_URL, {
+            method: "POST",
+            mode: "no-cors", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(localEntry)
         });
+    } catch (err) {
+        console.error("Background sync failed", err);
+    }
+}
 
-        if (ledgerList.innerHTML === "") {
-            ledgerList.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No logs recorded yet for this week.</p>';
+async function fetchAndRenderData() {
+    try {
+        const response = await fetch(WEB_APP_URL);
+        const serverData = await response.json();
+        if (serverData && serverData.length > 0) {
+            cachedExpenses = serverData.reverse();
+            localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
+            updateDashboardUI();
+        }
+    } catch (err) {
+        console.error("Background fetch failed", err);
+    }
+}
+
+function updateDashboardUI() {
+    const thisWeekStr = getWeekString();
+    const lastWeekStr = getPreviousWeekString(thisWeekStr);
+    
+    let thisWeekTotal = 0;
+    let lastWeekTotal = 0;
+    const weeklyAggregates = {};
+
+    const ledgerList = document.getElementById('ledger-list');
+    ledgerList.innerHTML = "";
+
+    cachedExpenses.forEach(exp => {
+        const itemWeek = getWeekString(exp.date);
+        if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
+        if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
+
+        if (itemWeek !== "Unknown") {
+            weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
         }
 
-        document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
-        document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
-
-        const badge = document.getElementById('comparison-badge');
-        if (thisWeekTotal > lastWeekTotal) {
-            const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-800";
-            badge.innerText = "+" + percent + "% vs last week";
-        } else if (thisWeekTotal < lastWeekTotal) {
-            const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800";
-            badge.innerText = "-" + percent + "% vs last week";
-        } else {
-            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600";
-            badge.innerText = "Equal to last week";
+        if (itemWeek === thisWeekStr) {
+            const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+            const row = document.createElement('div');
+            row.className = "ledger-row";
+            row.innerHTML = '<div><strong>' + exp.category + '</strong> <span style="color:#6b7280; font-size:11px;">/' + exp.subcategory + '</span><br><span style="color:#9ca3af; font-size:11px;">' + cleanDate + '</span></div><strong>$' + exp.amount.toFixed(2) + '</strong>';
+            ledgerList.appendChild(row);
         }
+    });
 
-        const historyList = document.getElementById('history-list');
-        historyList.innerHTML = "";
-        
-        Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
-            const item = document.createElement('div');
-            item.className = "flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100";
-            item.innerHTML = '<span class="font-medium text-gray-600">' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><span class="font-bold text-gray-900">$' + weeklyAggregates[wk].toFixed(2) + '</span>';
-            historyList.appendChild(item);
-        });
+    if (ledgerList.innerHTML === "") {
+        ledgerList.innerHTML = '<p style="color:#9ca3af; text-align:center; padding:1rem 0; margin:0;">No entries recorded this week.</p>';
     }
 
-    window.onload = initApp;
-</script>
+    document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
+    document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
+
+    const badge = document.getElementById('comparison-badge');
+    if (thisWeekTotal > lastWeekTotal) {
+        const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+        badge.className = "badge badge-red";
+        badge.innerText = "+" + percent + "% vs last week";
+    } else if (thisWeekTotal < lastWeekTotal) {
+        const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+        badge.className = "badge badge-green";
+        badge.innerText = "-" + percent + "% vs last week";
+    } else {
+        badge.className = "badge badge-gray";
+        badge.innerText = "Equal to last week";
+    }
+
+    const historyList = document.getElementById('history-list');
+    historyList.innerHTML = "";
+    
+    Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
+        const item = document.createElement('div');
+        item.className = "history-row";
+        item.innerHTML = '<span>' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><strong>$' + weeklyAggregates[wk].toFixed(2) + '</strong>';
+        historyList.appendChild(item);
+    });
+}
+
+window.onload = initApp;
