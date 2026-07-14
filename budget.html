@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cloud Home Budget</title>
     <style>
-        /* High-speed built-in styles. No internet required to load these! */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f3f4f6;
@@ -87,6 +86,7 @@
             font-weight: 700;
             color: #374151;
             cursor: pointer;
+            text-align: center;
         }
         .cat-btn.selected {
             border-color: #2563eb;
@@ -166,7 +166,6 @@
     </header>
 
     <main>
-        <!-- Form Section -->
         <section style="display: flex; flex-direction: column; gap: 1.5rem;">
             <div class="card">
                 <h2>📝 Quick Log Entry</h2>
@@ -175,10 +174,18 @@
                         <label>Amount ($)</label>
                         <input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00" class="amount-input">
                     </div>
+                    
+                    <!-- FIXED: Hardcoded buttons so they show up instantly no matter what -->
                     <div class="form-group">
                         <label>Category</label>
-                        <div class="btn-grid" id="category-grid"></div>
+                        <div class="btn-grid" id="category-grid">
+                            <button type="button" id="cat-Groceries" class="cat-btn" onclick="selectCategory('Groceries')">Groceries</button>
+                            <button type="button" id="cat-Utilities" class="cat-btn" onclick="selectCategory('Utilities')">Utilities</button>
+                            <button type="button" id="cat-Household" class="cat-btn" onclick="selectCategory('Household')">Household</button>
+                            <button type="button" id="cat-Other" class="cat-btn" onclick="selectCategory('Other')">Other</button>
+                        </div>
                     </div>
+                    
                     <div class="form-group hidden" id="subcategory-wrapper">
                         <label>Subcategory</label>
                         <div class="btn-grid" id="subcategory-grid"></div>
@@ -193,7 +200,6 @@
             </div>
         </section>
 
-        <!-- Stats Section -->
         <section style="display: flex; flex-direction: column; gap: 1.5rem;">
             <div class="summary-card">
                 <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">This Week Total</span>
@@ -251,181 +257,92 @@
         }
 
         function initApp() {
-    // 1. Force the category buttons to draw on your screen first
-    try {
-        renderCategoryGrid();
-    } catch(e) {
-        console.error("Error drawing categories", e);
-    }
-    
-    // 2. Set up the empty layout screen safely
-    try {
-        updateDashboardUI();
-    } catch(e) {
-        console.error("Error drawing dashboard layout", e);
-    }
-    
-    // 3. Connect to the cloud quietly in the background after everything is visible
-    setTimeout(function() {
-        fetchAndRenderData();
-    }, 100);
-}
+            updateDashboardUI();
+            setTimeout(function() {
+                fetchAndRenderData();
+            }, 100);
+        }
 
-function renderCategoryGrid() {
-    const grid = document.getElementById('category-grid');
-    if (!grid) return; // Stop if the element doesn't exist yet
-    
-    grid.innerHTML = "";
-    
-    // Safety check to ensure configuration is readable
-    if (typeof CONFIG === 'undefined' || !CONFIG.categories) {
-        grid.innerHTML = "<p style='color:red;'>Missing category configurations.</p>";
-        return;
-    }
-    
-    Object.keys(CONFIG.categories).forEach(cat => {
-        const btn = document.createElement('button');
-        btn.type = "button";
-        // Classic layout design assignment strings
-        btn.className = "cat-btn" + (selectedCategory === cat ? " selected" : "");
-        btn.innerText = cat;
-        btn.onclick = function() { selectCategory(cat); };
-        grid.appendChild(btn);
-    });
-}
         function selectCategory(cat) {
-    selectedCategory = cat;
-    // FIX: Set to an empty string instead of assigning the entire array list
-    selectedSubcategory = ""; 
-    renderCategoryGrid();
-    
-    const subWrapper = document.getElementById('subcategory-wrapper');
-    const subGrid = document.getElementById('subcategory-grid');
-    subWrapper.classList.remove('hidden');
-    subGrid.innerHTML = "";
-    
-    CONFIG.categories[cat].forEach(sub => {
-        const btn = document.createElement('button');
-        btn.type = "button";
-        btn.className = "sub-btn" + (selectedSubcategory === sub ? " selected" : "");
-        btn.innerText = sub;
-        btn.onclick = function() {
-            selectedSubcategory = sub;
-            selectCategory(cat);
-        };
-        subGrid.appendChild(btn);
-    });
-}
+            selectedCategory = cat;
+            selectedSubcategory = ""; 
+            
+            // Highlight selected category button natively
+            const buttons = document.querySelectorAll('.cat-btn');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            const activeBtn = document.getElementById('cat-' + cat);
+            if (activeBtn) activeBtn.classList.add('selected');
+            
+            const subWrapper = document.getElementById('subcategory-wrapper');
+            const subGrid = document.getElementById('subcategory-grid');
+            subWrapper.classList.remove('hidden');
+            subGrid.innerHTML = "";
+            
+            CONFIG.categories[cat].forEach(sub => {
+                const btn = document.createElement('button');
+                btn.type = "button";
+                btn.className = "sub-btn" + (selectedSubcategory === sub ? " selected" : "");
+                btn.innerText = sub;
+                btn.onclick = function() {
+                    selectedSubcategory = sub;
+                    // Re-highlight sub selection
+                    const subBtns = subGrid.querySelectorAll('.sub-btn');
+                    subBtns.forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                };
+                subGrid.appendChild(btn);
+            });
+        }
 
-async function saveExpense(e) {
-    e.preventDefault();
-    const amountInput = document.getElementById('amount');
-    const amount = parseFloat(amountInput.value);
-    
-    if (!amount || !selectedCategory) return;
+        async function saveExpense(e) {
+            e.preventDefault();
+            const amountInput = document.getElementById('amount');
+            const amount = parseFloat(amountInput.value);
+            
+            if (!amount || !selectedCategory) {
+                alert("Please select a Category first.");
+                return;
+            }
 
-    const localEntry = {
-        amount: amount,
-        category: selectedCategory,
-        subcategory: selectedSubcategory || "General",
-        date: new Date().toISOString()
-    };
+            const localEntry = {
+                amount: amount,
+                category: selectedCategory,
+                subcategory: selectedSubcategory || "General",
+                date: new Date().toISOString()
+            };
 
-    cachedExpenses.unshift(localEntry);
-    localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
-    updateDashboardUI();
-
-    amountInput.value = "";
-    selectedCategory = "";
-    selectedSubcategory = "";
-    document.getElementById('subcategory-wrapper').classList.add('hidden');
-    renderCategoryGrid();
-
-    try {
-        await fetch(WEB_APP_URL, {
-            method: "POST",
-            mode: "no-cors", 
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(localEntry)
-        });
-    } catch (err) {
-        console.error("Background sync failed", err);
-    }
-}
-
-async function fetchAndRenderData() {
-    try {
-        const response = await fetch(WEB_APP_URL);
-        const serverData = await response.json();
-        if (serverData && serverData.length > 0) {
-            cachedExpenses = serverData.reverse();
+            cachedExpenses.unshift(localEntry);
             localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
             updateDashboardUI();
-        }
-    } catch (err) {
-        console.error("Background fetch failed", err);
-    }
-}
 
-function updateDashboardUI() {
-    const thisWeekStr = getWeekString();
-    const lastWeekStr = getPreviousWeekString(thisWeekStr);
-    
-    let thisWeekTotal = 0;
-    let lastWeekTotal = 0;
-    const weeklyAggregates = {};
+            amountInput.value = "";
+            selectedCategory = "";
+            selectedSubcategory = "";
+            document.getElementById('subcategory-wrapper').classList.add('hidden');
+            document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('selected'));
 
-    const ledgerList = document.getElementById('ledger-list');
-    ledgerList.innerHTML = "";
-
-    cachedExpenses.forEach(exp => {
-        const itemWeek = getWeekString(exp.date);
-        if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
-        if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
-
-        if (itemWeek !== "Unknown") {
-            weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors", 
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(localEntry)
+                });
+            } catch (err) {
+                console.error("Background sync failed", err);
+            }
         }
 
-        if (itemWeek === thisWeekStr) {
-            const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-            const row = document.createElement('div');
-            row.className = "ledger-row";
-            row.innerHTML = '<div><strong>' + exp.category + '</strong> <span style="color:#6b7280; font-size:11px;">/' + exp.subcategory + '</span><br><span style="color:#9ca3af; font-size:11px;">' + cleanDate + '</span></div><strong>$' + exp.amount.toFixed(2) + '</strong>';
-            ledgerList.appendChild(row);
+        async function fetchAndRenderData() {
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const serverData = await response.json();
+                if (serverData && serverData.length > 0) {
+                    cachedExpenses = serverData.reverse();
+                    localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
+                    updateDashboardUI();
+                }
+            } catch (err) {
+                console.error("Background fetch failed", err);
+            }
         }
-    });
-
-    if (ledgerList.innerHTML === "") {
-        ledgerList.innerHTML = '<p style="color:#9ca3af; text-align:center; padding:1rem 0; margin:0;">No entries recorded this week.</p>';
-    }
-
-    document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
-    document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
-
-    const badge = document.getElementById('comparison-badge');
-    if (thisWeekTotal > lastWeekTotal) {
-        const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-        badge.className = "badge badge-red";
-        badge.innerText = "+" + percent + "% vs last week";
-    } else if (thisWeekTotal < lastWeekTotal) {
-        const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-        badge.className = "badge badge-green";
-        badge.innerText = "-" + percent + "% vs last week";
-    } else {
-        badge.className = "badge badge-gray";
-        badge.innerText = "Equal to last week";
-    }
-
-    const historyList = document.getElementById('history-list');
-    historyList.innerHTML = "";
-    
-    Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
-        const item = document.createElement('div');
-        item.className = "history-row";
-        item.innerHTML = '<span>' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><strong>$' + weeklyAggregates[wk].toFixed(2) + '</strong>';
-        historyList.appendChild(item);
-    });
-}
-
-window.onload = initApp;
