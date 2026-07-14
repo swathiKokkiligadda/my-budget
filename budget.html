@@ -251,10 +251,16 @@
         }
 
         function initApp() {
-            renderCategoryGrid();
-            updateDashboardUI();
-            fetchAndRenderData();
-        }
+    // 1. Instantly draw your interactive buttons on the screen (0 milliseconds)
+    renderCategoryGrid();
+    updateDashboardUI(); 
+    
+    // 2. Bypass the network bottleneck by quietly asking Google for data in the background
+    // This allows you to type your expenses immediately without waiting
+    setTimeout(function() {
+        fetchAndRenderData();
+    }, 100);
+}
 
         function renderCategoryGrid() {
             const grid = document.getElementById('category-grid');
