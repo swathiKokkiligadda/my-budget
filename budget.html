@@ -251,29 +251,48 @@
         }
 
         function initApp() {
-    // 1. Instantly draw your interactive buttons on the screen (0 milliseconds)
-    renderCategoryGrid();
-    updateDashboardUI(); 
+    // 1. Force the category buttons to draw on your screen first
+    try {
+        renderCategoryGrid();
+    } catch(e) {
+        console.error("Error drawing categories", e);
+    }
     
-    // 2. Bypass the network bottleneck by quietly asking Google for data in the background
-    // This allows you to type your expenses immediately without waiting
+    // 2. Set up the empty layout screen safely
+    try {
+        updateDashboardUI();
+    } catch(e) {
+        console.error("Error drawing dashboard layout", e);
+    }
+    
+    // 3. Connect to the cloud quietly in the background after everything is visible
     setTimeout(function() {
         fetchAndRenderData();
     }, 100);
 }
 
-        function renderCategoryGrid() {
-            const grid = document.getElementById('category-grid');
-            grid.innerHTML = "";
-            Object.keys(CONFIG.categories).forEach(cat => {
-                const btn = document.createElement('button');
-                btn.type = "button";
-                btn.className = "cat-btn" + (selectedCategory === cat ? " selected" : "");
-                btn.innerText = cat;
-                btn.onclick = function() { selectCategory(cat); };
-                grid.appendChild(btn);
-            });
-        }
+function renderCategoryGrid() {
+    const grid = document.getElementById('category-grid');
+    if (!grid) return; // Stop if the element doesn't exist yet
+    
+    grid.innerHTML = "";
+    
+    // Safety check to ensure configuration is readable
+    if (typeof CONFIG === 'undefined' || !CONFIG.categories) {
+        grid.innerHTML = "<p style='color:red;'>Missing category configurations.</p>";
+        return;
+    }
+    
+    Object.keys(CONFIG.categories).forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        // Classic layout design assignment strings
+        btn.className = "cat-btn" + (selectedCategory === cat ? " selected" : "");
+        btn.innerText = cat;
+        btn.onclick = function() { selectCategory(cat); };
+        grid.appendChild(btn);
+    });
+}
         function selectCategory(cat) {
     selectedCategory = cat;
     // FIX: Set to an empty string instead of assigning the entire array list
