@@ -11,54 +11,45 @@
 </head>
 <body class="bg-gray-100 text-gray-900 font-sans antialiased pb-12">
 
-    <!-- Loading Overlay -->
+    <!-- Loading Screen Overlay -->
     <div id="loading-screen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white hidden">
         <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
         <p class="font-semibold text-lg" id="loading-text">Connecting to Google Drive...</p>
     </div>
 
+    <!-- Top Navigation Bar -->
     <header class="bg-blue-600 text-white shadow-md sticky top-0 z-40 px-6 py-4 flex justify-between items-center">
         <h1 class="text-xl font-bold tracking-tight">Cloud Home Budget</h1>
         <button onclick="fetchAndRenderData()" class="bg-blue-700 hover:bg-blue-800 text-xs font-bold px-3 py-2 rounded-lg transition-all">🔄 Sync Now</button>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <!-- Data Entry & Live Log -->
+        <!-- Input & Log -->
         <section class="md:col-span-2 space-y-6">
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">📝 Quick Log Entry</h2>
-                
                 <form id="expense-form" class="space-y-4" onsubmit="saveExpense(event)">
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Amount ($)</label>
-                        <input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00" 
-                               class="w-full text-3xl font-bold px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-blue-600">
+                        <input id="amount" type="number" step="0.01" inputmode="decimal" required placeholder="0.00" class="w-full text-3xl font-bold px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-blue-600">
                     </div>
-
                     <div>
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</label>
                         <div class="grid grid-cols-3 gap-2" id="category-grid"></div>
                     </div>
-
                     <div id="subcategory-wrapper" class="hidden">
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Subcategory</label>
                         <div class="grid grid-cols-3 gap-2" id="subcategory-grid"></div>
                     </div>
-
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all active:scale-[0.99]">
-                        Cloud Log Expense
-                    </button>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-md transition-all active:scale-[0.99]">Cloud Log Expense</button>
                 </form>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <h3 class="text-md font-bold text-gray-800 mb-3 uppercase tracking-wider text-xs text-gray-500">This Week's Cloud Ledger</h3>
                 <div class="divide-y divide-gray-100 max-h-64 overflow-y-auto" id="ledger-list"></div>
             </div>
         </section>
-
-        <!-- Summary Statistics -->
+        <!-- Statistics -->
         <section class="space-y-6">
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-md space-y-4">
                 <div>
@@ -72,7 +63,6 @@
                 </div>
                 <div id="comparison-badge" class="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full"></div>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <h3 class="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wider text-gray-500">Weekly Progress</h3>
                 <div class="space-y-3" id="history-list"></div>
@@ -81,8 +71,10 @@
     </main>
 
     <script>
-        // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzeJPVEq4zd02eaCK77Kvv6kY1GSIUo1D1VqebFFR9m3c8_8z8CJ1tOwpoYGRLxmu71cg/exec";
+        // =========================================================
+        // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE INSIDE QUOTES
+        // =========================================================
+        const WEB_APP_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
 
         const CONFIG = {
             categories: {
@@ -114,7 +106,7 @@
             d.setUTCDate(d.getUTCDate() + 4 - dayNum);
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
             const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+            return d.getUTCFullYear() + "-W" + String(weekNo).padStart(2, '0');
         }
 
         function getPreviousWeekString(currentWeekStr) {
@@ -122,8 +114,8 @@
             if (parts.length !== 2) return "";
             const year = parseInt(parts[0]);
             const week = parseInt(parts[1]);
-            if (week === 1) return `${year - 1}-W52`;
-            return `${year}-W${String(week - 1).padStart(2, '0')}`;
+            if (week === 1) return (year - 1) + "-W52";
+            return year + "-W" + String(week - 1).padStart(2, '0');
         }
 
         function initApp() {
@@ -137,16 +129,16 @@
             Object.keys(CONFIG.categories).forEach(cat => {
                 const btn = document.createElement('button');
                 btn.type = "button";
-                btn.className = `p-3 rounded-xl border-2 text-sm font-bold text-center transition-all ${selectedCategory === cat ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700'}`;
+                btn.className = "p-3 rounded-xl border-2 text-sm font-bold text-center transition-all " + (selectedCategory === cat ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700');
                 btn.innerText = cat;
-                btn.onclick = () => selectCategory(cat);
+                btn.onclick = function() { selectCategory(cat); };
                 grid.appendChild(btn);
             });
         }
 
         function selectCategory(cat) {
             selectedCategory = cat;
-            selectedSubcategory = CONFIG.categories[cat][0];
+            selectedSubcategory = CONFIG.categories[cat][0]; 
             renderCategoryGrid();
             
             const subWrapper = document.getElementById('subcategory-wrapper');
@@ -157,9 +149,9 @@
             CONFIG.categories[cat].forEach(sub => {
                 const btn = document.createElement('button');
                 btn.type = "button";
-                btn.className = `p-2 rounded-lg border text-xs font-semibold text-center transition-all ${selectedSubcategory === sub ? 'border-emerald-600 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 bg-white text-gray-600'}`;
+                btn.className = "p-2 rounded-lg border text-xs font-semibold text-center transition-all " + (selectedSubcategory === sub ? 'border-emerald-600 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 bg-white text-gray-600');
                 btn.innerText = sub;
-                btn.onclick = () => {
+                btn.onclick = function() {
                     selectedSubcategory = sub;
                     selectCategory(cat);
                 };
@@ -183,22 +175,19 @@
             showLoading("Transmitting entry to Google Sheets...");
 
             try {
-                // Background POST to cloud sheet
                 await fetch(WEB_APP_URL, {
                     method: "POST",
-                    mode: "no-cors", // Essential for Google Apps Script execution bypass
+                    mode: "no-cors", 
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
 
-                // Clear input controls
                 amountInput.value = "";
                 selectedCategory = "";
                 selectedSubcategory = "";
                 document.getElementById('subcategory-wrapper').classList.add('hidden');
                 renderCategoryGrid();
 
-                // Small delay to let Google process row before re-fetching data
                 setTimeout(fetchAndRenderData, 800);
             } catch (err) {
                 alert("Cloud Sync failed. Verify internet connection.");
@@ -207,79 +196,80 @@
         }
 
         async function fetchAndRenderData() {
-          showLoading("Syncing budget details...");
-          try {const response = await fetch(WEB_APP_URL);
-            cachedExpenses = await response.json();
+            showLoading("Syncing budget details...");
+            try {
+                const response = await fetch(WEB_APP_URL);
+                cachedExpenses = await response.json();
 cachedExpenses.reverse(); 
 updateDashboardUI();
 } catch (err) {
-console.error("Fetch failed", err);
+    console.error("Fetch failed", err);
 } finally {
-hideLoading();
+    hideLoading();
 }
 }
 
 function updateDashboardUI() {
-const thisWeekStr = getWeekString();
-const lastWeekStr = getPreviousWeekString(thisWeekStr);
+    const thisWeekStr = getWeekString();
+    const lastWeekStr = getPreviousWeekString(thisWeekStr);
+    
+    let thisWeekTotal = 0;
+    let lastWeekTotal = 0;
+    const weeklyAggregates = {};
 
-let thisWeekTotal = 0;
-let lastWeekTotal = 0;
-const weeklyAggregates = {};
+    const ledgerList = document.getElementById('ledger-list');
+    ledgerList.innerHTML = "";
 
-const ledgerList = document.getElementById('ledger-list');
-ledgerList.innerHTML = "";
+    cachedExpenses.forEach(exp => {
+        const itemWeek = getWeekString(exp.date);
+        exp.computedWeek = itemWeek;
 
-cachedExpenses.forEach(exp => {
-const itemWeek = getWeekString(exp.date);
-exp.computedWeek = itemWeek;
+        if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
+        if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
 
-if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
-if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
+        if (itemWeek !== "Unknown") {
+            weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
+        }
 
-if (itemWeek !== "Unknown") {
-    weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
-}
+        if (itemWeek === thisWeekStr) {
+            const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+            const row = document.createElement('div');
+            row.className = "flex justify-between items-center py-3 text-sm";
+            row.innerHTML = '<div><p class="font-bold text-gray-800">' + exp.category + ' <span class="text-xs font-normal text-gray-400">/ ' + exp.subcategory + '</span></p><p class="text-xs text-gray-400">' + cleanDate + '</p></div><span class="font-extrabold text-gray-900">$' + exp.amount.toFixed(2) + '</span>';
+            ledgerList.appendChild(row);
+        }
+    });
 
-if (itemWeek === thisWeekStr) {
-    const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-    const row = document.createElement('div');
-    row.className = "flex justify-between items-center py-3 text-sm";
-    row.innerHTML = '<div><p class="font-bold text-gray-800">' + exp.category + ' <span class="text-xs font-normal text-gray-400">/ ' + exp.subcategory + '</span></p><p class="text-xs text-gray-400">' + cleanDate + '</p></div><span class="font-extrabold text-gray-900">$' + exp.amount.toFixed(2) + '</span>';
-    ledgerList.appendChild(row);
-}
-});
+    if (ledgerList.innerHTML === "") {
+        ledgerList.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No logs recorded yet for this week.</p>';
+    }
 
-if (ledgerList.innerHTML === "") {
-ledgerList.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No logs recorded yet for this week.</p>';
-}
+    document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
+    document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
 
-document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
-document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
+    const badge = document.getElementById('comparison-badge');
+    if (thisWeekTotal > lastWeekTotal) {
+        const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-800";
+        badge.innerText = "+" + percent + "% vs last week";
+    } else if (thisWeekTotal < lastWeekTotal) {
+        const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800";
+        badge.innerText = "-" + percent + "% vs last week";
+    } else {
+        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600";
+        badge.innerText = "Equal to last week";
+    }
 
-const badge = document.getElementById('comparison-badge');
-if (thisWeekTotal > lastWeekTotal) {
-const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-800";
-badge.innerText = "+" + percent + "% vs last week";
-} else if (thisWeekTotal < lastWeekTotal) {
-const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800";
-badge.innerText = "-" + percent + "% vs last week";
-} else {
-badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600";
-badge.innerText = "Equal to last week";
-}
-
-const historyList = document.getElementById('history-list');
-historyList.innerHTML = "";
-
-Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
-const item = document.createElement('div');
-item.className = "flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100";
-item.innerHTML = '<span class="font-medium text-gray-600">' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><span class="font-bold text-gray-900">$' + weeklyAggregates[wk].toFixed(2) + '</span>';
-historyList.appendChild(item);
-});
+    const historyList = document.getElementById('history-list');
+    historyList.innerHTML = "";
+    
+    Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
+        const item = document.createElement('div');
+        item.className = "flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100";
+        item.innerHTML = '<span class="font-medium text-gray-600">' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><span class="font-bold text-gray-900">$' + weeklyAggregates[wk].toFixed(2) + '</span>';
+        historyList.appendChild(item);
+    });
 }
 
 window.onload = initApp;
