@@ -276,7 +276,8 @@
         }
         function selectCategory(cat) {
     selectedCategory = cat;
-    selectedSubcategory = CONFIG.categories[cat][0]; // Selects the first subcategory by default
+    // FIX: Set to an empty string instead of assigning the entire array list
+    selectedSubcategory = ""; 
     renderCategoryGrid();
     
     const subWrapper = document.getElementById('subcategory-wrapper');
