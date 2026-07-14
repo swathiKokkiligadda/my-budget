@@ -71,205 +71,208 @@
     </main>
 
     <script>
-        // =========================================================
-        // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE INSIDE QUOTES
-        // =========================================================
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzeJPVEq4zd02eaCK77Kvv6kY1GSIUo1D1VqebFFR9m3c8_8z8CJ1tOwpoYGRLxmu71cg/exec";
+    // =========================================================
+    // PASTE YOUR DEPLOYED GOOGLE WEB APP URL HERE INSIDE QUOTES
+    // =========================================================
+    const WEB_APP_URL = "PASTE_YOUR_GOOGLE_WEB_APP_URL_HERE";
 
-        const CONFIG = {
-            categories: {
-                "Groceries": ["Fruits", "Vegetables", "Dairy", "Grains/Meat", "Snacks"],
-                "Utilities": ["Electric", "Water", "Gas", "Internet"],
-                "Household": ["Cleaning", "Kids Items", "Kitchenware", "Tools"],
-                "Other": ["General"]
-            }
+    const CONFIG = {
+        categories: {
+            "Groceries": ["Fruits", "Vegetables", "Dairy", "Grains/Meat", "Snacks"],
+            "Utilities": ["Electric", "Water", "Gas", "Internet"],
+            "Household": ["Cleaning", "Kids Items", "Kitchenware", "Tools"],
+            "Other": ["General"]
+        }
+    };
+
+    let selectedCategory = "";
+    let selectedSubcategory = "";
+    
+    // OPTIMIZATION: Instantly load cached history from local device buffer on startup
+    let cachedExpenses = JSON.parse(localStorage.getItem('budget_local_cache')) || [];
+
+    function getWeekString(dateInput) {
+        const date = dateInput ? new Date(dateInput) : new Date();
+        if (isNaN(date.getTime())) return "Unknown";
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return d.getUTCFullYear() + "-W" + String(weekNo).padStart(2, '0');
+    }
+
+    function getPreviousWeekString(currentWeekStr) {
+        const parts = currentWeekStr.split('-W');
+        if (parts.length !== 2) return "";
+        const year = parseInt(parts);
+        const week = parseInt(parts);
+        if (week === 1) return (year - 1) + "-W52";
+        return year + "-W" + String(week - 1).padStart(2, '0');
+    }
+
+    // OPTIMIZATION: Renders your buttons and numbers immediately from cache
+    function initApp() {
+        renderCategoryGrid();
+        updateDashboardUI(); // Zero delay layout initialization
+        
+        // Quietly connects to Google in the background without locking your screen
+        fetchAndRenderData();
+    }
+
+    function renderCategoryGrid() {
+        const grid = document.getElementById('category-grid');
+        grid.innerHTML = "";
+        Object.keys(CONFIG.categories).forEach(cat => {
+            const btn = document.createElement('button');
+            btn.type = "button";
+            btn.className = "p-3 rounded-xl border-2 text-sm font-bold text-center transition-all " + (selectedCategory === cat ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700');
+            btn.innerText = cat;
+            btn.onclick = function() { selectCategory(cat); };
+            grid.appendChild(btn);
+        });
+    }
+
+    function selectCategory(cat) {
+        selectedCategory = cat;
+        selectedSubcategory = CONFIG.categories[cat]; 
+        renderCategoryGrid();
+        
+        const subWrapper = document.getElementById('subcategory-wrapper');
+        const subGrid = document.getElementById('subcategory-grid');
+        subWrapper.classList.remove('hidden');
+        subGrid.innerHTML = "";
+        
+        CONFIG.categories[cat].forEach(sub => {
+            const btn = document.createElement('button');
+            btn.type = "button";
+            btn.className = "p-2 rounded-lg border text-xs font-semibold text-center transition-all " + (selectedSubcategory === sub ? 'border-emerald-600 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 bg-white text-gray-600');
+            btn.innerText = sub;
+            btn.onclick = function() {
+                selectedSubcategory = sub;
+                selectCategory(cat);
+            };
+            subGrid.appendChild(btn);
+        });
+    }
+
+    async function saveExpense(e) {
+        e.preventDefault();
+        const amountInput = document.getElementById('amount');
+        const amount = parseFloat(amountInput.value);
+        
+        if (!amount || !selectedCategory) return;
+
+        const localEntry = {
+            amount: amount,
+            category: selectedCategory,
+            subcategory: selectedSubcategory || "General",
+            date: new Date().toISOString()
         };
 
-        let selectedCategory = "";
-        let selectedSubcategory = "";
-        let cachedExpenses = [];
+        // Appends to layout screen immediately
+        cachedExpenses.unshift(localEntry);
+        localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
+        updateDashboardUI();
 
-        function showLoading(text) {
-            document.getElementById('loading-text').innerText = text;
-            document.getElementById('loading-screen').classList.remove('hidden');
-        }
+        // Clears data entry controls instantly
+        amountInput.value = "";
+        selectedCategory = "";
+        selectedSubcategory = "";
+        document.getElementById('subcategory-wrapper').classList.add('hidden');
+        renderCategoryGrid();
 
-        function hideLoading() {
-            document.getElementById('loading-screen').classList.add('hidden');
-        }
-
-        function getWeekString(dateInput) {
-            const date = dateInput ? new Date(dateInput) : new Date();
-            if (isNaN(date.getTime())) return "Unknown";
-            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            const dayNum = d.getUTCDay() || 7;
-            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            return d.getUTCFullYear() + "-W" + String(weekNo).padStart(2, '0');
-        }
-
-        function getPreviousWeekString(currentWeekStr) {
-            const parts = currentWeekStr.split('-W');
-            if (parts.length !== 2) return "";
-            const year = parseInt(parts[0]);
-            const week = parseInt(parts[1]);
-            if (week === 1) return (year - 1) + "-W52";
-            return year + "-W" + String(week - 1).padStart(2, '0');
-        }
-
-        function initApp() {
-            renderCategoryGrid();
-            fetchAndRenderData();
-        }
-
-        function renderCategoryGrid() {
-            const grid = document.getElementById('category-grid');
-            grid.innerHTML = "";
-            Object.keys(CONFIG.categories).forEach(cat => {
-                const btn = document.createElement('button');
-                btn.type = "button";
-                btn.className = "p-3 rounded-xl border-2 text-sm font-bold text-center transition-all " + (selectedCategory === cat ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700');
-                btn.innerText = cat;
-                btn.onclick = function() { selectCategory(cat); };
-                grid.appendChild(btn);
+        // Dispatches cloud update to Google Drive securely in the background
+        try {
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors", 
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(localEntry)
             });
+        } catch (err) {
+            console.error("Background sync failed", err);
         }
+    }
 
-        function selectCategory(cat) {
-            selectedCategory = cat;
-            selectedSubcategory = CONFIG.categories[cat][0]; 
-            renderCategoryGrid();
-            
-            const subWrapper = document.getElementById('subcategory-wrapper');
-            const subGrid = document.getElementById('subcategory-grid');
-            subWrapper.classList.remove('hidden');
-            subGrid.innerHTML = "";
-            
-            CONFIG.categories[cat].forEach(sub => {
-                const btn = document.createElement('button');
-                btn.type = "button";
-                btn.className = "p-2 rounded-lg border text-xs font-semibold text-center transition-all " + (selectedSubcategory === sub ? 'border-emerald-600 bg-emerald-50 text-emerald-700 font-bold' : 'border-gray-200 bg-white text-gray-600');
-                btn.innerText = sub;
-                btn.onclick = function() {
-                    selectedSubcategory = sub;
-                    selectCategory(cat);
-                };
-                subGrid.appendChild(btn);
-            });
-        }
-
-        async function saveExpense(e) {
-            e.preventDefault();
-            const amountInput = document.getElementById('amount');
-            const amount = parseFloat(amountInput.value);
-            
-            if (!amount || !selectedCategory) return;
-
-            const payload = {
-                amount: amount,
-                category: selectedCategory,
-                subcategory: selectedSubcategory || "General"
-            };
-
-            showLoading("Transmitting entry to Google Sheets...");
-
-            try {
-                await fetch(WEB_APP_URL, {
-                    method: "POST",
-                    mode: "no-cors", 
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                amountInput.value = "";
-                selectedCategory = "";
-                selectedSubcategory = "";
-                document.getElementById('subcategory-wrapper').classList.add('hidden');
-                renderCategoryGrid();
-
-                setTimeout(fetchAndRenderData, 800);
-            } catch (err) {
-                alert("Cloud Sync failed. Verify internet connection.");
-                hideLoading();
+    // OPTIMIZATION: Quietly refreshes local device storage once Google's server wakes up
+    async function fetchAndRenderData() {
+        try {
+            const response = await fetch(WEB_APP_URL);
+            const serverData = await response.json();
+            if (serverData && serverData.length > 0) {
+                cachedExpenses = serverData.reverse();
+                // Overwrite cache with the source of truth from your sheet
+                localStorage.setItem('budget_local_cache', JSON.stringify(cachedExpenses));
+                updateDashboardUI();
             }
+        } catch (err) {
+            console.error("Background fetch failed", err);
         }
-
-        async function fetchAndRenderData() {
-            showLoading("Syncing budget details...");
-            try {
-                const response = await fetch(WEB_APP_URL);
-                cachedExpenses = await response.json();
-cachedExpenses.reverse(); 
-updateDashboardUI();
-} catch (err) {
-    console.error("Fetch failed", err);
-} finally {
-    hideLoading();
-}
-}
-
-function updateDashboardUI() {
-    const thisWeekStr = getWeekString();
-    const lastWeekStr = getPreviousWeekString(thisWeekStr);
-    
-    let thisWeekTotal = 0;
-    let lastWeekTotal = 0;
-    const weeklyAggregates = {};
-
-    const ledgerList = document.getElementById('ledger-list');
-    ledgerList.innerHTML = "";
-
-    cachedExpenses.forEach(exp => {
-        const itemWeek = getWeekString(exp.date);
-        exp.computedWeek = itemWeek;
-
-        if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
-        if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
-
-        if (itemWeek !== "Unknown") {
-            weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
-        }
-
-        if (itemWeek === thisWeekStr) {
-            const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-            const row = document.createElement('div');
-            row.className = "flex justify-between items-center py-3 text-sm";
-            row.innerHTML = '<div><p class="font-bold text-gray-800">' + exp.category + ' <span class="text-xs font-normal text-gray-400">/ ' + exp.subcategory + '</span></p><p class="text-xs text-gray-400">' + cleanDate + '</p></div><span class="font-extrabold text-gray-900">$' + exp.amount.toFixed(2) + '</span>';
-            ledgerList.appendChild(row);
-        }
-    });
-
-    if (ledgerList.innerHTML === "") {
-        ledgerList.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No logs recorded yet for this week.</p>';
     }
 
-    document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
-    document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
+    function updateDashboardUI() {
+        const thisWeekStr = getWeekString();
+        const lastWeekStr = getPreviousWeekString(thisWeekStr);
+        
+        let thisWeekTotal = 0;
+        let lastWeekTotal = 0;
+        const weeklyAggregates = {};
 
-    const badge = document.getElementById('comparison-badge');
-    if (thisWeekTotal > lastWeekTotal) {
-        const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-800";
-        badge.innerText = "+" + percent + "% vs last week";
-    } else if (thisWeekTotal < lastWeekTotal) {
-        const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
-        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800";
-        badge.innerText = "-" + percent + "% vs last week";
-    } else {
-        badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600";
-        badge.innerText = "Equal to last week";
+        const ledgerList = document.getElementById('ledger-list');
+        ledgerList.innerHTML = "";
+
+        cachedExpenses.forEach(exp => {
+            const itemWeek = getWeekString(exp.date);
+            exp.computedWeek = itemWeek;
+
+            if (itemWeek === thisWeekStr) thisWeekTotal += exp.amount;
+            if (itemWeek === lastWeekStr) lastWeekTotal += exp.amount;
+
+            if (itemWeek !== "Unknown") {
+                weeklyAggregates[itemWeek] = (weeklyAggregates[itemWeek] || 0) + exp.amount;
+            }
+
+            if (itemWeek === thisWeekStr) {
+                const cleanDate = new Date(exp.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center py-3 text-sm";
+                row.innerHTML = '<div><p class="font-bold text-gray-800">' + exp.category + ' <span class="text-xs font-normal text-gray-400">/ ' + exp.subcategory + '</span></p><p class="text-xs text-gray-400">' + cleanDate + '</p></div><span class="font-extrabold text-gray-900">$' + exp.amount.toFixed(2) + '</span>';
+                ledgerList.appendChild(row);
+            }
+        });
+
+        if (ledgerList.innerHTML === "") {
+            ledgerList.innerHTML = '<p class="text-sm text-gray-400 py-4 text-center">No logs recorded yet for this week.</p>';
+        }
+
+        document.getElementById('total-this-week').innerText = "$" + thisWeekTotal.toFixed(2);
+        document.getElementById('total-last-week').innerText = "$" + lastWeekTotal.toFixed(2);
+
+        const badge = document.getElementById('comparison-badge');
+        if (thisWeekTotal > lastWeekTotal) {
+            const percent = (((thisWeekTotal - lastWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-800";
+            badge.innerText = "+" + percent + "% vs last week";
+        } else if (thisWeekTotal < lastWeekTotal) {
+            const percent = (((lastWeekTotal - thisWeekTotal) / (lastWeekTotal || 1)) * 100).toFixed(0);
+            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-800";
+            badge.innerText = "-" + percent + "% vs last week";
+        } else {
+            badge.className = "inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600";
+            badge.innerText = "Equal to last week";
+        }
+
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = "";
+        
+        Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
+            const item = document.createElement('div');
+            item.className = "flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100";
+            item.innerHTML = '<span class="font-medium text-gray-600">' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><span class="font-bold text-gray-900">$' + weeklyAggregates[wk].toFixed(2) + '</span>';
+            historyList.appendChild(item);
+        });
     }
 
-    const historyList = document.getElementById('history-list');
-    historyList.innerHTML = "";
-    
-    Object.keys(weeklyAggregates).sort().reverse().forEach(wk => {
-        const item = document.createElement('div');
-        item.className = "flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100";
-        item.innerHTML = '<span class="font-medium text-gray-600">' + (wk === thisWeekStr ? 'This Week' : wk) + '</span><span class="font-bold text-gray-900">$' + weeklyAggregates[wk].toFixed(2) + '</span>';
-        historyList.appendChild(item);
-    });
-}
-
-window.onload = initApp;
+    window.onload = initApp;
+</script>
